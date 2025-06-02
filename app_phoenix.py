@@ -3,6 +3,7 @@ import customtkinter as ctk
 import tkinter as tk
 import logging
 import os
+import datetime  # <-- Added import
 
 from gui.main_window import MainWindow
 from gui.license_activation_window import LicenseActivationWindow
@@ -118,7 +119,7 @@ class App:
 
     def _show_license_activation(self):
          self.root.withdraw() 
-         activation_window = LicenseActivationWindow(
+         LicenseActivationWindow(  # Removed unused variable assignment
              self.root, self.license_manager, self._on_license_activated_successfully
          )
 
