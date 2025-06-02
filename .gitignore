@@ -1,2 +1,8 @@
 logs/app_phoenix.log
-logs/app_phoenix.log
+gui/__pycache__/
+gui/views/__pycache__/
+gui/views/compiled/
+gui/views/compiled/*.pyc
+utils/__pycache__/
+utils/compiled/
+utils/compiled/*.pyc
