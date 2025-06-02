@@ -1,28 +1,27 @@
 # gui/sidebar_frame.py
 import customtkinter as ctk
 from utils import icon_loader 
-# from utils import theme_colors # Ne treba direktan import ako app_context prosljeđuje boje
+# from utils import theme_colors # Nije potrebno ako se boje dohvaćaju iz app_context-a
+import logging # <<<< DODAJ OVAJ IMPORT
+
+logger = logging.getLogger(__name__) # <<<< INICIJALIZIRAJ LOGGER ZA MODUL
 
 class SidebarFrame(ctk.CTkFrame):
     def __init__(self, master, app_callbacks: dict, user_type: str, app_context: dict, **kwargs):
-        # Dohvati fg_color iz kwargs ako je proslijeđen, inače koristi default iz teme
-        # Ovo osigurava da se fg_color postavi samo jednom.
         self.app_context = app_context 
         self.theme_colors = self.app_context.get("theme_colors", {})
+        self.logger = logger # <<<<<< DODAJ OVU LINIJU
 
-        # Ako fg_color nije specificiran pri kreiranju instance SidebarFrame,
-        # onda koristi defaultnu boju iz theme_colors.
-        # Ako JEST specificiran (kao što radiš u MainWindow), taj će se koristiti.
         final_fg_color = kwargs.pop("fg_color", self.theme_colors.get("SIDEBAR_BACKGROUND", "#292A3D")) 
         super().__init__(master, fg_color=final_fg_color, **kwargs)
 
         self.app_callbacks = app_callbacks
         self.user_type = user_type
 
+        # ... ostatak __init__ metode kao prije ...
         self.grid_rowconfigure(5, weight=1) 
         self.grid_columnconfigure(0, weight=1)
 
-        # Logo / Naziv Aplikacije
         app_logo_label = ctk.CTkLabel(self, text="BlackBox DHQ\nPhoenix",
                                       font=ctk.CTkFont(size=22, weight="bold"),
                                       text_color=self.theme_colors.get("TEXT_ACCENT", "#A082F6"))
@@ -54,8 +53,7 @@ class SidebarFrame(ctk.CTkFrame):
                                        command=lambda: self.app_callbacks.get("select_view", lambda name: None)("queue"))
         self.btn_queue.grid(row=3, column=0, padx=15, pady=8, sticky="ew")
 
-        # Admin gumb (ako je super_admin)
-        self.btn_admin_panel = None # Inicijaliziraj kao None
+        self.btn_admin_panel = None 
         if self.user_type == "super_admin":
             self.admin_icon = icon_loader.load_icon("admin_icon")
             self.btn_admin_panel = ctk.CTkButton(self, text="Admin Panel", image=self.admin_icon, 
@@ -63,7 +61,6 @@ class SidebarFrame(ctk.CTkFrame):
                                                  command=lambda: self.app_callbacks.get("select_view", lambda name: None)("admin_panel"))
             self.btn_admin_panel.grid(row=4, column=0, padx=15, pady=8, sticky="ew")
 
-        # Gumbi na dnu sidebar-a (red 6 i 7)
         self.settings_icon = icon_loader.load_icon("settings_icon")
         self.btn_settings = ctk.CTkButton(self, text="Postavke", image=self.settings_icon, **button_common_config,
                                           command=lambda: self.app_callbacks.get("select_view", lambda name: None)("settings"))
@@ -81,11 +78,12 @@ class SidebarFrame(ctk.CTkFrame):
             "settings": self.btn_settings,
             "license_info": self.btn_license,
         }
-        if self.btn_admin_panel: # Dodaj samo ako je kreiran
+        if self.btn_admin_panel: 
             self.navigation_buttons["admin_panel"] = self.btn_admin_panel
 
-    # update_active_button metoda ostaje ista
     def update_active_button(self, active_view_name: str):
+        # Sada možeš koristiti self.logger
+        self.logger.debug(f"Sidebar: Ažuriram aktivni gumb na '{active_view_name}'. Dostupni: {list(self.navigation_buttons.keys())}")
         for name, btn_widget in self.navigation_buttons.items():
             if btn_widget is None: continue 
             if name == active_view_name:
