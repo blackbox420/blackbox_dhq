@@ -94,14 +94,18 @@ class App:
     def _placeholder_initial_dm_callback(self, task, update_type, data=None):
          logger.debug(f"DM_INIT_CALLBACK: Task {task.item_id if task else 'N/A'}, Type: {update_type}, Data: {data}")
 
-    def _on_app_quit(self):
-         logger.info("Zatvaram aplikaciju...")
-         current_geometry = self.root.geometry()
-         self.settings["window_geometry"] = current_geometry
-         settings_handler.save_settings(self.settings)
-         if self.download_manager: self.download_manager.stop_worker()
-         self.root.destroy()
-         logger.info("Aplikacija uspješno zatvorena (konzolni ispis).")
+    def _on_app_quit(self, from_logout=False): # Dodaj parametar
+        if not from_logout: # Spremaj geometriju samo ako nije odjava
+             logger.info("Zatvaram aplikaciju (normalno)...")
+             current_geometry = self.root.geometry()
+             self.settings["window_geometry"] = current_geometry
+             settings_handler.save_settings(self.settings)
+        else:
+             logger.info("Zatvaram aplikaciju nakon odjave licence...")
+
+        if self.download_manager: self.download_manager.stop_worker()
+        self.root.destroy()
+        print(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - INFO     - [__main__] (N/A) - Aplikacija uspješno zatvorena.")
 
     def _check_license_and_launch(self):
          is_valid, license_info_or_error = self.license_manager.is_license_valid()

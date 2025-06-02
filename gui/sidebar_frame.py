@@ -77,10 +77,14 @@ class SidebarFrame(ctk.CTkFrame):
     def update_active_button(self, active_view_name: str):
         self.logger.debug(f"Sidebar: Ažuriram aktivni gumb na '{active_view_name}'. Dostupni: {list(self.navigation_buttons.keys())}")
         for name, btn_widget in self.navigation_buttons.items():
-            if btn_widget is None: continue 
+            if btn_widget is None: # Provjeri da li gumb postoji (npr. za admin_panel)
+                continue 
+            
+            # Ključna provjera: Da li se 'name' (ključ iz rječnika) poklapa s 'active_view_name'
             if name == active_view_name:
                 btn_widget.configure(fg_color=self.theme_colors.get("SIDEBAR_ACTIVE_BACKGROUND", "#7A52F4"),
                                      text_color=self.theme_colors.get("SIDEBAR_ACTIVE_TEXT", "#FFFFFF"))
             else:
+                # Vrati na defaultni stil
                 btn_widget.configure(fg_color="transparent", 
                                      text_color=self.theme_colors.get("SIDEBAR_TEXT", "#D0D0E0"))
