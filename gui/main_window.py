@@ -159,10 +159,15 @@ class MainWindow:
     def _internal_handle_download_update(self, task: de.DownloadTask, update_type: str, data=None):
         self.logger.debug(f"MW internal update: Task ID {task.item_id if task else 'N/A'}, Type: {update_type}")
         queue_view_instance = self.views_cache.get("queue")
-        if not isinstance(queue_view_instance, QueueView):
-            self.logger.warning("QueueView nije inicijaliziran."); self._update_status_bar_for_task(task, update_type); return
-        if not hasattr(queue_view_instance, 'queue_treeview') or not queue_view_instance.queue_treeview:
-            self.logger.warning("QueueView.queue_treeview nije dostupan."); self._update_status_bar_for_task(task, update_type); return
+        # Prvo provjeri da li je queue_view_instance ispravnog tipa i da li POSTOJI i da li IMA queue_treeview
+        if not isinstance(queue_view_instance, QueueView) or \
+           not hasattr(queue_view_instance, 'queue_treeview') or \
+           not queue_view_instance.queue_treeview: # Dodatna provjera da nije None
+            self.logger.warning("QueueView ili QueueView.queue_treeview nije inicijaliziran/dostupan.")
+            self._update_status_bar_for_task(task, update_type) # Ažuriraj barem statusnu traku
+            return 
+        
+        # Sada znamo da queue_view_instance.queue_treeview postoji
 
         if update_type == "status_update":
             if task.status == "U redu":
