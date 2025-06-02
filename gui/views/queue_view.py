@@ -80,7 +80,147 @@ class QueueView(BaseView):
         self.start_all_btn.pack(side="left", padx=5)
 
         self.clear_completed_btn = ctk.CTkButton(control_buttons_frame, text="Očisti Završene/Greške", command=self._clear_finished_tasks, height=30)
-        self.clear_completed_btn.pack(side="left", padx=5)
+    def on_view_enter(self):
+        super().on_view_enter()
+        self.cancel_selected_btn.configure(state="disabled")
+        self.logger.info("QueueView postao aktivan. Osvježavam prikaz reda.")
+        
+        # Obriši sve postojeće iteme da izbjegneš duplikate pri ponovnom ulasku
+        for item in self.queue_treeview.get_children():
+            self.queue_treeview.delete(item)
+        self.treeview_item_map.clear() # Očisti i mapu
+
+        if self.dm:
+            all_dm_tasks = self.dm.get_all_tasks_snapshot()
+            self.logger.debug(f"Dohvaćeno {len(all_dm_tasks)} zadataka iz DownloadManagera za prikaz.")
+            # Sortiraj taskove, npr. po vremenu dodavanja ili statusu (ako želiš)
+            # sorted_tasks = sorted(all_dm_tasks, key=lambda t: t.added_time, reverse=True) # Najnoviji na vrhu
+            for task in all_dm_tasks: # Koristi originalni redoslijed za sada
+                self.add_task_to_view(task) # Ponovno dodaj sve u Treeview
+        else:
+            self.logger.warning("DownloadManager nije dostupan u QueueView pri on_view_enter.")
+
+    def _clear_finished_tasks(self):
+        items_to_remove_from_dm = []
+        items_to_delete_from_treeview = []
+
+        for item_id_str in list(self.treeview_item_map.keys()): # Iteriraj preko kopije ključeva
+            task = self.treeview_item_map.get(item_id_str)
+            if task and (task.status == "Završeno" or "Greška" in task.status or "Otkazano" in task.status):
+                items_to_delete_from_treeview.append(item_id_str)
+                if self.dm: # Ako postoji DM, zabilježi za brisanje iz njega
+                    items_to_remove_from_dm.append(item_id_str)
+        
+        for item_id_str in items_to_delete_from_treeview:
+            self.remove_task_from_view(item_id_str) # Ukloni iz GUI-ja
+
+        if self.dm:
+            for item_id_str in items_to_remove_from_dm:
+                self.dm.remove_task_completely(item_id_str) # Ukloni iz DM-a
+        
+        self.logger.info(f"Obrisano {len(items_to_delete_from_treeview)} završenih/neuspjelih/otkazanih zadataka.")
+        if not self.queue_treeview.get_children(): # Ako je lista prazna
+             status_bar_var = self.app_context.get("status_bar_var")
+             if status_bar_var: status_bar_var.set("Red čekanja je prazan.")
+
+
+    def _cancel_selected_task(self):
+         selected_items_iid = self.queue_treeview.selection()
+         if not selected_items_iid:
+             messagebox.showwarning("Nema odabira", "Molimo odaberite zadatak za otkazivanje.", parent=self.winfo_toplevel())
+             return
+         
+         task_item_id_str = selected_items_iid[0] 
+         task_to_cancel = self.treeview_item_map.get(task_item_id_str)
+
+         if task_to_cancel and self.dm:
+             if task_to_cancel.status == "Preuzimanje..." or task_to_cancel.status == "U redu" or task_to_cancel.status == "Čeka":
+                 if messagebox.askyesno("Potvrda Otkazivanja", f"Jeste li sigurni da želite otkazati preuzimanje za:\n{task_to_cancel.url}?", parent=self.winfo_toplevel()):
+                     success = self.dm.cancel_task(task_item_id_str)
+                     if success:
+                         self.logger.info(f"Zahtjev za otkazivanje poslan za task ID: {task_item_id_str}")
+                         # DownloadManager će poslati update_callback s novim statusom "Otkazano"
+                         # Nema potrebe za _finalize_cancel_gui ako DM to radi
+                     else:
+                         self.logger.warning(f"Nije moguće otkazati task {task_item_id_str} (možda nije aktivan ili u redu).")
+                         # Ažuriraj GUI svejedno ako DM nije uspio poslati update
+                         task_to_cancel.status = "Greška otkazivanja" 
+                         self.update_task_in_view(task_to_cancel)
+             else:
+                 messagebox.showinfo("Info", "Ovaj zadatak nije u stanju koje se može otkazati (npr. već je završen ili ima grešku).", parent=self.winfo_toplevel())
+         self.cancel_selected_btn.configure(state="disabled")
+
+    # add_task_to_view i update_task_in_view ostaju skoro isti,
+    # samo osiguraj da koriste str(task.item_id) konzistentno kao iid.
+    # I u update_task_in_view, provjeri da li task.item_id postoji u self.treeview_item_map prije nego što ga ažuriraš.
+
+    def add_task_to_view(self, task: de.DownloadTask):
+        item_id_str = str(task.item_id)
+        if not self.winfo_exists(): return # Ako je view uništen
+
+        if item_id_str in self.treeview_item_map and self.queue_treeview.exists(item_id_str):
+            # Ako već postoji, samo ga ažuriraj (npr. status se promijenio brzo)
+            self.update_task_in_view(task)
+            return
+
+        display_url = task.url
+        if len(display_url) > 60: display_url = display_url[:57] + "..."
+        
+        # Provjeri da item_id ne postoji prije inserta (Treeview ne voli duple iid)
+        if not self.queue_treeview.exists(item_id_str):
+             try:
+                 self.queue_treeview.insert("", "end", iid=item_id_str, values=(
+                     display_url, task.quality_profile_key, task.status,
+                     task.progress_str, f"{task.speed_str} / {task.eta_str}"
+                 ))
+                 self.treeview_item_map[item_id_str] = task # Spremi referencu na task
+                 self.logger.debug(f"Task dodan u QueueView: {item_id_str} sa statusom {task.status}")
+             except tk.TclError as e_insert: # Uhvati grešku ako iid već postoji
+                 self.logger.error(f"TclError pri insertu u Treeview za iid {item_id_str}: {e_insert}. Pokušavam update.")
+                 self.update_task_in_view(task) # Pokušaj update umjesto toga
+        else: 
+             self.update_task_in_view(task) # Ako već postoji, samo ažuriraj
+
+
+    def update_task_in_view(self, task: de.DownloadTask):
+        item_id_str = str(task.item_id)
+        if not self.winfo_exists(): return
+
+        if not self.queue_treeview.exists(item_id_str):
+            # Ako item ne postoji, a trebao bi biti ažuriran, možda ga je DM tek dodao
+            # ili je došlo do desinkronizacije. Pokušaj ga dodati.
+            self.logger.warning(f"Pokušaj ažuriranja nepostojećeg itema {item_id_str} u QueueView. Dodajem ga.")
+            self.add_task_to_view(task)
+            return
+
+        display_name = os.path.basename(task.final_filename) if task.final_filename else task.url
+        if len(display_name) > 60: display_name = display_name[:57] + "..."
+        
+        speed_eta_display = f"{task.speed_str} / {task.eta_str}" if task.speed_str or task.eta_str else "-"
+        if task.status == "Preuzimanje..." and not task.speed_str and not task.eta_str:
+            speed_eta_display = "Pokrećem..."
+
+
+        try:
+             self.queue_treeview.item(item_id_str, values=(
+                 display_name, task.quality_profile_key, task.status,
+                 task.progress_str, speed_eta_display
+             ))
+
+             tags_to_apply = ()
+             if task.status == "Završeno": tags_to_apply = ('COMPLETED',)
+             elif "Greška" in task.status or "Otkazano" in task.status : tags_to_apply = ('ERROR',)
+             elif task.status == "Preuzimanje...": tags_to_apply = ('DOWNLOADING',)
+             elif task.status == "U redu" or task.status == "Čeka": tags_to_apply = ('WAITING',)
+             self.queue_treeview.item(item_id_str, tags=tags_to_apply)
+             self.logger.debug(f"Task ažuriran u QueueView: {item_id_str}, Status: {task.status}, Progres: {task.progress_str}")
+        except tk.TclError as e_update: # Ako item ne postoji iz nekog razloga
+             self.logger.error(f"TclError pri ažuriranju itema {item_id_str} u Treeview: {e_update}")
+             # Možda ukloniti iz mape ako je Treeview item nasilno obrisan
+             if item_id_str in self.treeview_item_map:
+                 del self.treeview_item_map[item_id_str]
+
+        
 
         self.cancel_selected_btn = ctk.CTkButton(control_buttons_frame, text="Otkaži Odabrano", command=self._cancel_selected_task, height=30, state="disabled")
         self.cancel_selected_btn.pack(side="left", padx=5)

@@ -100,58 +100,44 @@ class MainWindow:
 
     # --- DODAJ OVU METODU ---
     def handle_download_update(self, task: de.DownloadTask, update_type: str, data=None):
-        """Prima ažuriranja od DownloadManagera i prosljeđuje ih relevantnim view-ima."""
-        logger.debug(f"MainWindow primio update: Task ID {task.item_id if task else 'N/A'}, Type: {update_type}, Podaci: {data if data else 'Nema'}")
+        # Osiguraj da se GUI ažurira u glavnoj niti
+        self.root.after(0, self._internal_handle_download_update, task, update_type, data)
 
-        queue_view_instance = self.views_cache.get("queue")
-        if not isinstance(queue_view_instance, QueueView): # Provjeri da li je QueueView instanca
-            logger.warning("QueueView nije inicijaliziran ili nije ispravnog tipa, ne mogu ažurirati GUI reda.")
-            self._update_status_bar_for_task(task, update_type) # Ažuriraj samo statusnu traku
-            return
-
-        # Novi zadatak se dodaje u red ili se status ažurira
-        if update_type == "status_update":
-            # Provjeri da li item postoji prije nego što pokušaš add_task_to_view ako status nije "U redu"
-            if task.status == "U redu": # Novi task je dodan u DownloadManagerov red
-                if not queue_view_instance.queue_treeview.exists(str(task.item_id)): # Koristi str() za iid
-                    queue_view_instance.add_task_to_view(task)
-                else: 
-                    queue_view_instance.update_task_in_view(task)
-            elif queue_view_instance.queue_treeview.exists(str(task.item_id)):
+    def _internal_handle_download_update(self, task: de.DownloadTask, update_type: str, data=None):
+         logger.debug(f"MainWindow (internal) primio update: Task ID {task.item_id if task else 'N/A'}, Type: {update_type}, Podaci: {data if data else 'Nema'}")
+         
+         queue_view_instance = self.views_cache.get("queue")
+         
+         if isinstance(queue_view_instance, QueueView) and queue_view_instance.winfo_exists():
+             if update_type == "status_update" and task.status == "U redu":
+                 # Ovo je prvi put da vidimo task, ili je status resetiran na "U redu"
+                 # add_task_to_view će ili dodati novi ili ažurirati postojeći
+                 queue_view_instance.add_task_to_view(task)
+             elif hasattr(queue_view_instance, 'queue_treeview') and queue_view_instance.queue_treeview.exists(str(task.item_id)):
                  queue_view_instance.update_task_in_view(task)
+             elif update_type in ["progress_update", "download_complete", "download_error"]:
+                 # Ako je ovo update za postojeći task koji iz nekog razloga nije u treeview, dodaj ga
+                 logger.warning(f"Update ({update_type}) za task {task.item_id} koji nije u QueueView. Dodajem ga.")
+                 queue_view_instance.add_task_to_view(task) # Ovo će ga dodati ili ažurirati
 
-        elif update_type == "progress_update":
-            if queue_view_instance.queue_treeview.exists(str(task.item_id)):
-                queue_view_instance.update_task_in_view(task)
-            else:
-                logger.warning(f"Progress update za nepostojeći task {task.item_id} u QueueView. Pokušavam dodati.")
-                queue_view_instance.add_task_to_view(task)
-
-        elif update_type == "download_complete" or update_type == "download_error":
-            if queue_view_instance.queue_treeview.exists(str(task.item_id)):
-                queue_view_instance.update_task_in_view(task)
-            else:
-                logger.warning(f"Download završen/greška za nepostojeći task {task.item_id} u QueueView. Dodajem sa završnim statusom.")
-                queue_view_instance.add_task_to_view(task)
-
-        # Logiranje u Log Panel unutar QueueView
-        if update_type == "log_message" and data:
-            if hasattr(queue_view_instance, 'log_text_area') and \
-               isinstance(queue_view_instance.log_text_area, ctk.CTkTextbox): # Provjeri da je CTkTextbox
-                try:
-                    if queue_view_instance.log_text_area.winfo_exists():
-                        # Već formatirano u downloader_engine preko TextHandler-a ako je postavljen na root logger
-                        # Ako šaljemo direktno, treba formatirati ili samo dodati data
-                        queue_view_instance.log_text_area.configure(state="normal")
-                        queue_view_instance.log_text_area.insert("end", f"{str(data)}\n")
-                        queue_view_instance.log_text_area.configure(state="disabled")
-                        queue_view_instance.log_text_area.see("end")
-                except tk.TclError as e_log_tk:
-                    logger.warning(f"Tkinter greška pri upisu u log panel QueueView-a (iz MainWindow): {e_log_tk}")
-                except Exception as e_log:
-                    logger.error(f"Greška pri upisu u log panel QueueView-a (iz MainWindow): {e_log}")
-
-        self._update_status_bar_for_task(task, update_type)
+             # Logiranje u Log Panel unutar QueueView
+             if update_type == "log_message" and data:
+                 if hasattr(queue_view_instance, 'log_text_area') and \
+                    isinstance(queue_view_instance.log_text_area, ctk.CTkTextbox):
+                     try:
+                         if queue_view_instance.log_text_area.winfo_exists():
+                             queue_view_instance.log_text_area.configure(state="normal")
+                             queue_view_instance.log_text_area.insert("end", f"{str(data)}\n")
+                             queue_view_instance.log_text_area.configure(state="disabled")
+                             queue_view_instance.log_text_area.see("end")
+                     except tk.TclError as e_log_tk: # Uhvati grešku ako je widget uništen
+                         logger.warning(f"Tkinter greška pri upisu u log panel QueueView-a (iz MainWindow): {e_log_tk}")
+                     except Exception as e_log: # Općenitija greška
+                         logger.error(f"Greška pri upisu u log panel QueueView-a (iz MainWindow): {e_log}")
+         else:
+             logger.warning("QueueView nije dostupan ili nije ispravnog tipa, ne mogu ažurirati GUI reda.")
+         
+         self._update_status_bar_for_task(task, update_type) # Ažuriraj statusnu traku
 
     def _update_status_bar_for_task(self, task: de.DownloadTask | None, update_type: str):
         """Helper metoda za ažuriranje statusne trake na osnovu taska."""
