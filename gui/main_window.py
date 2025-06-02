@@ -59,51 +59,37 @@ class MainWindow:
         self.main_content_frame.grid_rowconfigure(0, weight=1)
 
     def _create_views(self):
-            app_context = self.root.app_context 
-            app_context["main_window_select_tab_callback"] = self.select_view 
-            
-            theme_colors_dict = app_context.get("theme_colors", {})
-            # view_bg_color = theme_colors_dict.get("BACKGROUND_CONTENT", "transparent") # Originalno
-            view_text_color = theme_colors_dict.get("TEXT_PRIMARY", "#FFFFFF")
-            view_text_accent_color = theme_colors_dict.get("TEXT_ACCENT", view_text_color)
-            view_text_secondary_color = theme_colors_dict.get("TEXT_SECONDARY", "gray")
+        app_context = self.root.app_context 
+        app_context["main_window_select_tab_callback"] = self.select_view 
 
-            # --- TEST BOJE ZA POGLEDE ---
-            test_colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF"]
-            view_idx = 0
+        # --- TEST BOJE ZA POGLEDE ---
+        test_colors_list = ["#FF5733", "#33FF57", "#3357FF", "#FFC300", "#FF33FB", "#00FFFB", "#C70039"]
+        current_color_index = 0
+        def get_next_test_color():
+            nonlocal current_color_index
+            color_to_return = test_colors_list[current_color_index % len(test_colors_list)]
+            current_color_index += 1
+            return color_to_return
+        # -----------------------------
 
-            def get_test_color():
-                nonlocal view_idx
-                color = test_colors[view_idx % len(test_colors)]
-                view_idx += 1
-                return color
-            # -----------------------------
+        # Dashboard (Placeholder) - ovo je CTkFrame, pa mu direktno postavljamo fg_color
+        dashboard_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color()) 
+        ctk.CTkLabel(dashboard_view, text="Dashboard SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
+        self.views_cache["dashboard"] = dashboard_view
 
-            # Dashboard (Placeholder)
-            dashboard_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_test_color()) # TEST BOJA
-            ctk.CTkLabel(dashboard_view, text="Dashboard", font=ctk.CTkFont(size=36, weight="bold"), text_color=view_text_accent_color).pack(pady=30, padx=30, anchor="nw")
-            ctk.CTkLabel(dashboard_view, text="Pregled aktivnosti i statistika (uskoro).", font=ctk.CTkFont(size=16), text_color=view_text_secondary_color).pack(pady=10, padx=30, anchor="nw")
-            self.views_cache["dashboard"] = dashboard_view
-            
-            # Za stvarne poglede, proslijedit ćemo im test boju preko app_contexta ili direktno
-            # Ako BaseView koristi fg_color iz kwargs, možemo ga direktno postaviti
-            self.views_cache["downloads"] = DownloadsView(self.main_content_frame, app_context, fg_color=get_test_color()) # TEST BOJA
-            self.views_cache["queue"] = QueueView(self.main_content_frame, app_context, fg_color=get_test_color()) # TEST BOJA
-            self.views_cache["settings"] = SettingsView(self.main_content_frame, app_context, fg_color=get_test_color()) # TEST BOJA
-            
-            # License Info (Placeholder)
-            license_info_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_test_color()) # TEST BOJA
-            ctk.CTkLabel(license_info_view, text="Informacije o Licenci", font=ctk.CTkFont(size=36, weight="bold"), text_color=view_text_accent_color).pack(pady=30, padx=30, anchor="nw")
-            current_lic_info = app_context.get("license_info", {})
-            ctk.CTkLabel(license_info_view, text=f"Korisnik: {current_lic_info.get('user', 'N/A')}", font=ctk.CTkFont(size=16), text_color=view_text_color).pack(anchor="w", padx=30, pady=2)
-            # ... (ostale labele za license_info) ...
-            self.views_cache["license_info"] = license_info_view
+        # Stvarni pogledi - BaseView će sada koristiti proslijeđenu fg_color
+        self.views_cache["downloads"] = DownloadsView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
+        self.views_cache["queue"] = QueueView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
+        self.views_cache["settings"] = SettingsView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
 
-            if self.user_type == "super_admin":
-                admin_panel_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_test_color()) # TEST BOJA
-                ctk.CTkLabel(admin_panel_view, text="Admin Panel", font=ctk.CTkFont(size=36, weight="bold"), text_color=view_text_accent_color).pack(pady=30, padx=30, anchor="nw")
-                ctk.CTkLabel(admin_panel_view, text="Dobrodošao, Harise! Ovo je tvoj administratorski panel (u izradi).", font=ctk.CTkFont(size=16), text_color=view_text_secondary_color).pack(anchor="w", padx=30)
-                self.views_cache["admin_panel"] = admin_panel_view
+        license_info_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color())
+        ctk.CTkLabel(license_info_view, text="Informacije o Licenci SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
+        self.views_cache["license_info"] = license_info_view
+
+        if self.user_type == "super_admin":
+            admin_panel_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color())
+            ctk.CTkLabel(admin_panel_view, text="Admin Panel SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
+            self.views_cache["admin_panel"] = admin_panel_view
 
     # --- DODAJ OVU METODU ---
     def handle_download_update(self, task: de.DownloadTask, update_type: str, data=None):
