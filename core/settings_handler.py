@@ -8,8 +8,6 @@ logger = logging.getLogger(__name__)
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".blackbox_dhq_phoenix_v3")
 APP_SETTINGS_FILE = os.path.join(CONFIG_DIR, "app_settings.json")
 
-# Ključevi za kvalitetu će se dinamički učitavati iz downloader_engine.QUALITY_PROFILE_KEYS
-# Ovo je samo placeholder ako downloader_engine nije dostupan pri prvom importu.
 DEFAULT_QUALITY_PROFILES_KEYS_PLACEHOLDER = [
      "Video - 1080p MP4", "Video - 720p MP4", "Video - Najbolji MP4", 
      "Audio - Najbolji MP3", "Audio - Najbolji M4A/AAC", "Općenito - Najbolje Moguće"
@@ -17,7 +15,7 @@ DEFAULT_QUALITY_PROFILES_KEYS_PLACEHOLDER = [
 
 DEFAULT_SETTINGS = {
     "output_directory": os.path.join(os.path.expanduser("~"), "Desktop", "BlackBox_Phoenix_Downloads"),
-    "default_quality": "Video - 1080p MP4", # Ovaj ključ mora postojati u QUALITY_PROFILES
+    "default_quality": "Video - 1080p MP4",
     "theme": "blue", 
     "appearance_mode": "dark",
     "window_geometry": "1280x780",
@@ -27,7 +25,7 @@ DEFAULT_SETTINGS = {
     "prefer_hw_acceleration": False,
     "embed_thumbnail_audio": True,
     "add_metadata_video": True,
-    "sidebar_width": 240, # Dodana opcija za širinu sidebara
+    "sidebar_width": 240,
 }
 
 def _ensure_output_dir_exists(output_dir_path, settings_ref_to_update_on_fallback):
@@ -58,7 +56,7 @@ def load_settings():
     if not os.path.exists(APP_SETTINGS_FILE):
         logger.info(f"Fajl s postavkama ne postoji ({APP_SETTINGS_FILE}). Kreiram s defaultnim vrijednostima.")
         _ensure_output_dir_exists(current_settings["output_directory"], current_settings)
-        _save_settings(current_settings) # Spremi da se osigura da fallback dir bude zapisan ako je korišten
+        _save_settings(current_settings)
         return current_settings
     
     try:

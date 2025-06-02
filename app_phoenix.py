@@ -1,9 +1,11 @@
-# app_phoenix.py
+# APP_PHOEINX.PY BY <:..:> hthc..., 02.06.2025 [Date x Time] 06:20h <:..:>
+# This file is part of the BlackBox DHQ Phoenix project.
 import customtkinter as ctk
 import tkinter as tk
 import logging
 import os
-import datetime  # <-- Added import
+from unittest.mock import MagicMock, patch
+import datetime  # (optional: remove if not used elsewhere) 
 
 from gui.main_window import MainWindow
 from gui.license_activation_window import LicenseActivationWindow
@@ -99,7 +101,7 @@ class App:
          settings_handler.save_settings(self.settings)
          if self.download_manager: self.download_manager.stop_worker()
          self.root.destroy()
-         print(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - INFO     - [__main__] (N/A) - Aplikacija uspješno zatvorena (konzolni ispis).")
+         logger.info("Aplikacija uspješno zatvorena (konzolni ispis).")
 
     def _check_license_and_launch(self):
          is_valid, license_info_or_error = self.license_manager.is_license_valid()
@@ -119,7 +121,7 @@ class App:
 
     def _show_license_activation(self):
          self.root.withdraw() 
-         LicenseActivationWindow(  # Removed unused variable assignment
+         LicenseActivationWindow(
              self.root, self.license_manager, self._on_license_activated_successfully
          )
 
@@ -142,24 +144,34 @@ class App:
          if self.download_manager and hasattr(self.main_window_instance, 'handle_download_update'):
              self.download_manager.update_callback = self.main_window_instance.handle_download_update
          else:
-             logger.error("Nije moguće postaviti DownloadManager callback na MainWindow!")
+             logger.error("Nije moguće postaviti DownloadManager callback na MainWindow! Postavljam zadani fallback behavior.")
+             def default_download_update(task, update_type, data=None):
+                 logger.warning(f"Default fallback: Task {task.item_id if task else 'N/A'}, Type: {update_type}, Data: {data}")
+             self.download_manager.update_callback = default_download_update
 
 if __name__ == "__main__":
-    # ... (try-except blok za pokretanje App ostaje isti) ...
     try:
         app = App()
     except Exception as e:
-        logger.critical(f"Nepredviđena greška pri pokretanju aplikacije: {e}", exc_info=True)
-        # Fallback Tkinter error popup
-        import tkinter as tk_err_popup_fallback
-        from tkinter import messagebox as tk_msg_err_popup_fallback
         try:
+            logger.critical(f"Nepredviđena greška pri pokretanju aplikacije: {e}", exc_info=True)
+        except Exception as logger_error:
+            print(f"Logger failure: {logger_error}")
+            print(f"Nepredviđena greška pri pokretanju aplikacije: {e}")
+        # Fallback Tkinter error popup
+        try:
+            import tkinter as tk_err_popup_fallback
+            from tkinter import messagebox as tk_msg_err_popup_fallback
             root_err_popup_fallback = tk_err_popup_fallback.Tk()
             root_err_popup_fallback.withdraw()
             tk_msg_err_popup_fallback.showerror(
                 "Kritična Greška Aplikacije",
-                f"Došlo je do nepredviđene greške pri pokretanju:\n\n{e}\n\n"
-                "Aplikacija se ne može pokrenuti. Molimo provjerite 'logs/app_phoenix.log' za detalje."
+                (
+                    "Došlo je do nepredviđene greške pri pokretanju:\n\n"
+                    f"{e}\n\n"
+                    "Aplikacija se ne može pokrenuti. "
+                    "Molimo provjerite 'logs/app_phoenix.log' za detalje."
+                )
             )
             root_err_popup_fallback.destroy()
         except Exception as e_popup_fallback:
