@@ -6,14 +6,9 @@ logger = logging.getLogger(__name__)
 
 class BaseView(ctk.CTkFrame):
     def __init__(self, master, view_name:str, app_context: dict, **kwargs):
-        # Dohvati fg_color iz kwargs ako je proslijeđen od strane potklase (npr. DownloadsView).
-        # Ako nije proslijeđen, koristi defaultnu boju pozadine sadržaja iz teme,
-        # ili 'transparent' kao krajnji fallback.
         default_bg = app_context.get("theme_colors", {}).get("BACKGROUND_CONTENT", "transparent")
-        final_fg_color = kwargs.pop('fg_color', default_bg) # Uzmi fg_color iz kwargs, ako postoji, inače default
-
-        super().__init__(master, fg_color=final_fg_color, **kwargs) # Proslijedi očišćene kwargs
-
+        final_fg_color = kwargs.pop('fg_color', default_bg) # Uzima fg_color iz kwargs ako postoji
+        super().__init__(master, fg_color=final_fg_color, **kwargs)
         self.view_name = view_name
         self.app_context = app_context
         self.logger = logger 
