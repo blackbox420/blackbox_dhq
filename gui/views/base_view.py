@@ -1,25 +1,31 @@
 # gui/views/base_view.py
 import customtkinter as ctk
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BaseView(ctk.CTkFrame):
     def __init__(self, master, view_name:str, app_context: dict, **kwargs):
-        super().__init__(master, fg_color="transparent", **kwargs) # Prozirna pozadina da se vidi pozadina main_view_frame
+        # Dohvati fg_color iz kwargs ako je proslijeđen od strane potklase (npr. DownloadsView).
+        # Ako nije proslijeđen, koristi defaultnu boju pozadine sadržaja iz teme,
+        # ili 'transparent' kao krajnji fallback.
+        default_bg = app_context.get("theme_colors", {}).get("BACKGROUND_CONTENT", "transparent")
+        final_fg_color = kwargs.pop('fg_color', default_bg) # Uzmi fg_color iz kwargs, ako postoji, inače default
+
+        super().__init__(master, fg_color=final_fg_color, **kwargs) # Proslijedi očišćene kwargs
+
         self.view_name = view_name
-        self.app_context = app_context # Rječnik s referencama na npr. download_manager, settings, itd.
+        self.app_context = app_context
+        self.logger = logger 
         self.build_ui()
 
     def build_ui(self):
-        """Potklase trebaju implementirati ovu metodu za kreiranje svog UI-ja."""
-        # Primjer:
-        # title_label = ctk.CTkLabel(self, text=f"Ovo je {self.view_name} pogled", font=ctk.CTkFont(size=24, weight="bold"))
-        # title_label.pack(pady=20, padx=20, anchor="nw")
-        pass
+        pass 
 
     def on_view_enter(self):
-        """Poziva se kada ovaj pogled postane aktivan."""
-        # Npr. za osvježavanje podataka
-        pass
+        self.logger.debug(f"Ulazak u pogled: {self.view_name}")
+        pass 
 
     def on_view_leave(self):
-        """Poziva se kada se napušta ovaj pogled."""
+        self.logger.debug(f"Napuštanje pogleda: {self.view_name}")
         pass

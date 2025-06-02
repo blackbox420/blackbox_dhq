@@ -1,10 +1,11 @@
 # gui/views/queue_view.py
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import ttk, scrolledtext # scrolledtext za TextHandler, CTkTextbox za prikaz
+from tkinter import ttk, scrolledtext
 from .base_view import BaseView
 import logging
 import os
+from core import downloader_engine as de # <<<<<< DODAJ OVAJ IMPORT
 
 logger = logging.getLogger(__name__)
 
