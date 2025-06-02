@@ -51,6 +51,26 @@ class CTkTextboxHandler(logging.Handler):
 
 
 class QueueView(BaseView):
+    def add_task_to_view(self, task: de.DownloadTask):
+        item_id_str = str(task.item_id)
+        if not self.winfo_exists() or not hasattr(self, 'queue_treeview') or not self.queue_treeview: # Dodatna provjera
+            self.logger.warning(f"Pokušaj dodavanja taska {item_id_str} u QueueView, ali Treeview nije spreman.")
+            # Možeš dodati task u neku privremenu listu i pokušati ponovno s self.after()
+            self.master.after(100, lambda t=task: self.add_task_to_view(t)) # Pokušaj ponovno za 100ms
+            return
+
+        # ... (ostatak metode kao prije) ...
+        if item_id_str in self.treeview_item_map and self.queue_treeview.exists(item_id_str):
+            self.update_task_in_view(task)
+            return
+        # ...
+
+    def update_task_in_view(self, task: de.DownloadTask):
+        item_id_str = str(task.item_id)
+        if not self.winfo_exists() or not hasattr(self, 'queue_treeview') or not self.queue_treeview: # Dodatna provjera
+            self.logger.warning(f"Pokušaj ažuriranja taska {item_id_str} u QueueView, ali Treeview nije spreman.")
+            self.master.after(100, lambda t=task: self.update_task_in_view(t)) # Pokušaj ponovno za 100ms
+            return
     def __init__(self, master, app_context: dict, **kwargs):
         self.treeview_item_map = {} 
         self.dm = app_context.get("download_manager")
