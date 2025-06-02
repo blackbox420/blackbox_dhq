@@ -73,22 +73,35 @@ class MainWindow:
         # -----------------------------
 
         # Dashboard (Placeholder) - ovo je CTkFrame, pa mu direktno postavljamo fg_color
-        dashboard_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color()) 
+        dashboard_view_color = get_next_test_color()
+        self.logger.debug(f"Kreiram DashboardView s bojom: {dashboard_view_color}")
+        dashboard_view = ctk.CTkFrame(self.main_content_frame, fg_color=dashboard_view_color) 
         ctk.CTkLabel(dashboard_view, text="Dashboard SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
         self.views_cache["dashboard"] = dashboard_view
 
-        # Stvarni pogledi - BaseView će sada koristiti proslijeđenu fg_color
-        self.views_cache["downloads"] = DownloadsView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
-        self.views_cache["queue"] = QueueView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
-        self.views_cache["settings"] = SettingsView(self.main_content_frame, app_context, fg_color=get_next_test_color()) 
+        downloads_view_color = get_next_test_color()
+        self.logger.debug(f"Kreiram DownloadsView s bojom: {downloads_view_color}")
+        self.views_cache["downloads"] = DownloadsView(self.main_content_frame, app_context, fg_color=downloads_view_color) 
 
-        license_info_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color())
-        ctk.CTkLabel(license_info_view, text="Informacije o Licenci SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
+        queue_view_color = get_next_test_color()
+        self.logger.debug(f"Kreiram QueueView s bojom: {queue_view_color}")
+        self.views_cache["queue"] = QueueView(self.main_content_frame, app_context, fg_color=queue_view_color) 
+
+        settings_view_color = get_next_test_color()
+        self.logger.debug(f"Kreiram SettingsView s bojom: {settings_view_color}")
+        self.views_cache["settings"] = SettingsView(self.main_content_frame, app_context, fg_color=settings_view_color) 
+
+        license_info_color = get_next_test_color()
+        self.logger.debug(f"Kreiram LicenseInfoView s bojom: {license_info_color}")
+        license_info_view = ctk.CTkFrame(self.main_content_frame, fg_color=license_info_color)
+        # ... (ostatak license_info_view) ...
         self.views_cache["license_info"] = license_info_view
 
         if self.user_type == "super_admin":
-            admin_panel_view = ctk.CTkFrame(self.main_content_frame, fg_color=get_next_test_color())
-            ctk.CTkLabel(admin_panel_view, text="Admin Panel SADRŽAJ", font=ctk.CTkFont(size=36, weight="bold")).pack(pady=30, padx=30, anchor="nw")
+            admin_panel_color = get_next_test_color()
+            self.logger.debug(f"Kreiram AdminPanelView s bojom: {admin_panel_color}")
+            admin_panel_view = ctk.CTkFrame(self.main_content_frame, fg_color=admin_panel_color)
+            # ... (ostatak admin_panel_view) ...
             self.views_cache["admin_panel"] = admin_panel_view
 
     # --- DODAJ OVU METODU ---

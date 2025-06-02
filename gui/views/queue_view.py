@@ -1,11 +1,11 @@
 # gui/views/queue_view.py
 import customtkinter as ctk
-import tkinter as tk 
-from tkinter import ttk, messagebox # Dodaj messagebox
+import tkinter as tk
+from tkinter import ttk, scrolledtext
 from .base_view import BaseView
 import logging
 import os
-from core import downloader_engine as de # Za tipove
+from core import downloader_engine as de # <<<<<< DODAJ OVAJ IMPORT
 
 logger = logging.getLogger(__name__)
 
